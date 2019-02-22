@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+function main() {
+	! git rev-parse --is-inside-work-tree >/dev/null 2>&1 && echo 1>&2 'fatal: not a git repository (or any of the parent directories): .git' && return 1
+	[[ $# == 0 ]] && echo "$0 <pattern> [PATH [PATH[...]]]" >&2 && return 1
+	local sed_cmd='sed'
+	if type >/dev/null 2>&1 gsed; then
+		sed_cmd='gsed'
+	else
+		if [[ $(uname) == "Darwin" ]]; then
+			echo 1>&2 ' brew install gnu-sed'
+			return 1
+		fi
+	fi
+
+	local pattern="$1"
+	shift
+
+	while IFS= read -r filepath || [[ -n "$filepath" ]]; do
+		# NOTE: -h: symbolic link
+		[[ -f "$filepath" ]] && [[ ! -L "$filepath" ]] && "$sed_cmd" -i -E "$pattern" "$filepath"
+	done < <(git ls-files -- "$@")
+}
+main "$@"

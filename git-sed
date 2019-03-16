@@ -32,7 +32,7 @@ function main() {
 	fi
 
 	while IFS= read -r filepath || [[ -n "$filepath" ]]; do
-		# NOTE: -h: symbolic link
+		# NOTE: -L: symbolic link
 		[[ -f "$filepath" ]] && [[ ! -L "$filepath" ]] && "$sed_cmd" -i -E "$pattern" "$filepath"
 	done < <(git ls-files -- "$@")
 }

@@ -64,6 +64,11 @@ EOF
       echo $'\e[38;5;179m'"$filepath"$'\e[m'
       if [[ $dry_run == 0 ]]; then
         "$sed_cmd" "${opts[@]}" "$pattern" "$filepath"
+        local exit_code="$?"
+        if [[ $exit_code != 0 ]]; then
+          echo 1>&2 $'\e[38;5;202m'"Failed sed command with exit code: $?"$'\e[m'
+          exit $exit_code
+        fi
       fi
     fi
   done < <(git ls-files -- "$@")

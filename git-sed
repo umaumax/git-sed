@@ -15,12 +15,24 @@ function main() {
     fi
   fi
 
+  local dry_run=0
+  local opts=(-i -E)
+  for arg in "$@"; do
+    if [[ "$arg" =~ "-n|--dry-run" ]]; then
+      dry_run=1
+      shift
+      continue
+    fi
+    if [[ "$arg" =~ ^- ]]; then
+      opts=("${opts[@]}" "$arg")
+      shift
+      continue
+    else
+      break
+    fi
+  done
   local pattern
-  if [[ $git_sed_cmd != 'git-fixedsed' ]]; then
-    [[ $# -lt 1 ]] && echo "$(basename "$0") <pattern> [PATH [PATH[...]]]" >&2 && return 1
-    pattern="$1"
-    shift
-  else
+  if [[ $git_sed_cmd == 'git-fixedsed' ]]; then
     [[ $# -lt 2 ]] && echo "$(basename "$0") <src> <dst> [PATH [PATH[...]]]" >&2 && return 1
     local src_text
     local dst_text
@@ -29,11 +41,31 @@ function main() {
     pattern="s/$src_text/$dst_text/g"
     shift
     shift
+  else
+    if [[ $# -lt 1 ]]; then
+      cat <<EOF >&2
+$(basename "$0") [sed options] <pattern> [PATH [PATH[...]]]
+
+e.g.
+# run dry-run mode (to check target files)
+$(basename "$0") --dry-run 's/old/new/g' '*.md'
+# remove start ~ end pattern block (even if multi lines)
+$(basename "$0") -z 's/start-pattern.*end-pattern//g' '*.md'
+EOF
+      return 1
+    fi
+    pattern="$1"
+    shift
   fi
 
   while IFS= read -r filepath || [[ -n "$filepath" ]]; do
     # NOTE: -L: symbolic link
-    [[ -f "$filepath" ]] && [[ ! -L "$filepath" ]] && "$sed_cmd" -i -E "$pattern" "$filepath"
+    if [[ -f "$filepath" ]] && [[ ! -L "$filepath" ]]; then
+      echo $'\e[38;5;179m'"$filepath"$'\e[m'
+      if [[ $dry_run == 0 ]]; then
+        "$sed_cmd" "${opts[@]}" "$pattern" "$filepath"
+      fi
+    fi
   done < <(git ls-files -- "$@")
 }
 main "$@"

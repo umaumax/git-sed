@@ -1,39 +1,39 @@
 #!/usr/bin/env bash
 
 function main() {
-	local git_sed_cmd
-	git_sed_cmd="$(basename "$0")"
-	! git rev-parse --is-inside-work-tree >/dev/null 2>&1 && echo 1>&2 'fatal: not a git repository (or any of the parent directories): .git' && return 1
+  local git_sed_cmd
+  git_sed_cmd="$(basename "$0")"
+  ! git rev-parse --is-inside-work-tree >/dev/null 2>&1 && echo 1>&2 'fatal: not a git repository (or any of the parent directories): .git' && return 1
 
-	local sed_cmd='sed'
-	if type >/dev/null 2>&1 gsed; then
-		sed_cmd='gsed'
-	else
-		if [[ $(uname) == "Darwin" ]]; then
-			echo 1>&2 ' brew install gnu-sed'
-			return 1
-		fi
-	fi
+  local sed_cmd='sed'
+  if type >/dev/null 2>&1 gsed; then
+    sed_cmd='gsed'
+  else
+    if [[ $(uname) == "Darwin" ]]; then
+      echo 1>&2 ' brew install gnu-sed'
+      return 1
+    fi
+  fi
 
-	local pattern
-	if [[ $git_sed_cmd != 'git-fixedsed' ]]; then
-		[[ $# -lt 1 ]] && echo "$(basename "$0") <pattern> [PATH [PATH[...]]]" >&2 && return 1
-		pattern="$1"
-		shift
-	else
-		[[ $# -lt 2 ]] && echo "$(basename "$0") <src> <dst> [PATH [PATH[...]]]" >&2 && return 1
-		local src_text
-		local dst_text
-		src_text=$(printf '%s' "$1" | sed -E 's/([$+/|.*\()?]|\[|\]|\^)/\\&/g')
-		dst_text=$(printf '%s' "$2" | sed -e 's/[\/&]/\\&/g')
-		pattern="s/$src_text/$dst_text/g"
-		shift
-		shift
-	fi
+  local pattern
+  if [[ $git_sed_cmd != 'git-fixedsed' ]]; then
+    [[ $# -lt 1 ]] && echo "$(basename "$0") <pattern> [PATH [PATH[...]]]" >&2 && return 1
+    pattern="$1"
+    shift
+  else
+    [[ $# -lt 2 ]] && echo "$(basename "$0") <src> <dst> [PATH [PATH[...]]]" >&2 && return 1
+    local src_text
+    local dst_text
+    src_text=$(printf '%s' "$1" | sed -E 's/([$+/|.*\()?]|\[|\]|\^)/\\&/g')
+    dst_text=$(printf '%s' "$2" | sed -e 's/[\/&]/\\&/g')
+    pattern="s/$src_text/$dst_text/g"
+    shift
+    shift
+  fi
 
-	while IFS= read -r filepath || [[ -n "$filepath" ]]; do
-		# NOTE: -L: symbolic link
-		[[ -f "$filepath" ]] && [[ ! -L "$filepath" ]] && "$sed_cmd" -i -E "$pattern" "$filepath"
-	done < <(git ls-files -- "$@")
+  while IFS= read -r filepath || [[ -n "$filepath" ]]; do
+    # NOTE: -L: symbolic link
+    [[ -f "$filepath" ]] && [[ ! -L "$filepath" ]] && "$sed_cmd" -i -E "$pattern" "$filepath"
+  done < <(git ls-files -- "$@")
 }
 main "$@"

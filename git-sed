@@ -61,14 +61,24 @@ EOF
   while IFS= read -r filepath || [[ -n "$filepath" ]]; do
     # NOTE: -L: symbolic link
     if [[ -f "$filepath" ]] && [[ ! -L "$filepath" ]]; then
-      echo $'\e[38;5;179m'"$filepath"$'\e[m'
+      echo -n $'\e[38;5;179m'"$filepath: "$'\e[m'
       if [[ $dry_run == 0 ]]; then
+        local pre_hash=$(md5sum "$filepath")
         "$sed_cmd" "${opts[@]}" "$pattern" "$filepath"
         local exit_code="$?"
         if [[ $exit_code != 0 ]]; then
           echo 1>&2 $'\e[38;5;202m'"Failed sed command with exit code: $?"$'\e[m'
           exit $exit_code
         fi
+        local post_hash=$(md5sum "$filepath")
+        if [[ "$pre_hash" == "$post_hash" ]]; then
+          # same file(not changed)
+          echo -n "🔒"
+        else
+          # changed
+          echo -n "👀"
+        fi
+        echo
       fi
     fi
   done < <(git ls-files -- "$@")

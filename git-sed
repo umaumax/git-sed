@@ -1,5 +1,15 @@
 #!/usr/bin/env bash
 
+function git-sed_echo() {
+  [[ "$GIT_SED_QUIET" == 1 ]] && return
+  echo "$@"
+}
+
+function git-sed_printf() {
+  [[ "$GIT_SED_QUIET" == 1 ]] && return
+  printf "$@"
+}
+
 function main() {
   local git_sed_cmd
   git_sed_cmd="$(basename "$0")"
@@ -16,9 +26,15 @@ function main() {
   fi
 
   local dry_run=0
+  export GIT_SED_QUIET=${GIT_SED_QUIET:-0}
   local opts=(-i -E)
   for arg in "$@"; do
-    if [[ "$arg" =~ "-n|--dry-run" ]]; then
+    if [[ "$arg" =~ -q|--quiet ]]; then
+      GIT_SED_QUIET=1
+      shift
+      continue
+    fi
+    if [[ "$arg" =~ -n|--dry-run ]]; then
       dry_run=1
       shift
       continue
@@ -44,9 +60,11 @@ function main() {
   else
     if [[ $# -lt 1 ]]; then
       cat <<EOF >&2
-$(basename "$0") [sed options] <pattern> [PATH [PATH[...]]]
+$(basename "$0") [git-sed options] [sed options] <pattern> [PATH [PATH[...]]]
 
 e.g.
+# run with quiet mode
+$(basename "$0") -q 's/old/new/g' '*.md'
 # run dry-run mode (to check target files)
 $(basename "$0") --dry-run 's/old/new/g' '*.md'
 # remove start ~ end pattern block (even if multi lines)
@@ -61,30 +79,30 @@ EOF
   while IFS= read -r filepath || [[ -n "$filepath" ]]; do
     # NOTE: -L: symbolic link
     if [[ -f "$filepath" ]] && [[ ! -L "$filepath" ]]; then
-      echo -n $'\e[38;5;179m'"$filepath: "$'\e[m'
+      git-sed_echo -n $'\e[38;5;179m'"$filepath: "$'\e[m'
       if [[ $dry_run == 0 ]]; then
         local pre_hash=$(md5sum "$filepath")
         "$sed_cmd" "${opts[@]}" "$pattern" "$filepath"
         local exit_code="$?"
         if [[ $exit_code != 0 ]]; then
-          echo 1>&2 $'\e[38;5;202m'"Failed sed command with exit code: $?"$'\e[m'
+          git-sed_echo 1>&2 $'\e[38;5;202m'"Failed sed command with exit code: $?"$'\e[m'
           exit $exit_code
         fi
         local post_hash=$(md5sum "$filepath")
         if [[ "$pre_hash" == "$post_hash" ]]; then
           # same file(not changed)
-          echo -n "🔒"
+          git-sed_echo -n "🔒"
         else
           # changed
-          echo -n "👻"
+          git-sed_echo -n "👻"
         fi
-        echo
+        git-sed_echo
       fi
     fi
   done < <(git ls-files -- "$@")
-  printf '%*s\n' "$(tput cols)" '' | tr ' ' "="
-  echo $'\e[38;5;57m''git diff --stat .'$'\e[m'
-  printf '%*s\n' "$(tput cols)" '' | tr ' ' "="
-  git --no-pager diff --stat --color=always .
+  git-sed_printf '%*s\n' "$(tput cols)" '' | tr ' ' "="
+  git-sed_echo $'\e[38;5;57m''git diff --stat .'$'\e[m'
+  git-sed_printf '%*s\n' "$(tput cols)" '' | tr ' ' "="
+  [[ "$GIT_SED_QUIET" == 0 ]] && git --no-pager diff --stat --color=always .
 }
 main "$@"

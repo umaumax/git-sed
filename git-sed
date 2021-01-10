@@ -83,8 +83,8 @@ EOF
     fi
   done < <(git ls-files -- "$@")
   printf '%*s\n' "$(tput cols)" '' | tr ' ' "="
-  echo $'\e[38;5;57m''git diff --stat'$'\e[m'
+  echo $'\e[38;5;57m''git diff --stat .'$'\e[m'
   printf '%*s\n' "$(tput cols)" '' | tr ' ' "="
-  git --no-pager diff --stat --color=always
+  git --no-pager diff --stat --color=always .
 }
 main "$@"

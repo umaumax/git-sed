@@ -29,12 +29,12 @@ function main() {
   export GIT_SED_QUIET=${GIT_SED_QUIET:-0}
   local opts=(-i -E)
   for arg in "$@"; do
-    if [[ "$arg" =~ -q|--quiet ]]; then
+    if [[ "$arg" =~ ^(-q|--quiet) ]]; then
       GIT_SED_QUIET=1
       shift
       continue
     fi
-    if [[ "$arg" =~ -n|--dry-run ]]; then
+    if [[ "$arg" =~ ^(-n|--dry-run) ]]; then
       dry_run=1
       shift
       continue

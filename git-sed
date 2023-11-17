@@ -47,6 +47,7 @@ function main() {
       break
     fi
   done
+
   local pattern
   if [[ $git_sed_cmd == 'git-fixedsed' ]]; then
     [[ $# -lt 2 ]] && echo "$(basename "$0") <src> <dst> [PATH [PATH[...]]]" >&2 && return 1
@@ -105,4 +106,5 @@ EOF
   git-sed_printf '%*s\n' "$(tput cols)" '' | tr ' ' "="
   [[ "$GIT_SED_QUIET" == 0 ]] && git --no-pager diff --stat --color=always .
 }
+
 main "$@"
